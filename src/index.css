@@ -1,0 +1,228 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 98%;
+    --foreground: 240 5% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 240 5% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 5% 10%;
+
+    --primary: 240 5% 15%;
+    --primary-foreground: 0 0% 98%;
+
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5% 10%;
+
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5% 10%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 5.9% 10%;
+
+    --radius: 1rem;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 240 5.9% 10%;
+    --foreground: 0 0% 98%;
+
+    --card: 240 5.9% 12%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 240 5.9% 12%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
+
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-image: radial-gradient(
+      rgba(0, 0, 0, 0.025) 1px,
+      transparent 1px
+    );
+    background-size: 30px 30px;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-card/70 border border-border/30 rounded-xl shadow-glass backdrop-blur-sm 
+           hover:shadow-glass-hover transition-all duration-300 ease-in-out;
+  }
+  
+  .glass-morphism {
+    @apply bg-glass-gradient backdrop-blur-md border border-white/10 shadow-glass;
+  }
+
+  .asset-badge-gold {
+    @apply bg-gold/10 text-gold border border-gold/20 rounded-full px-3 py-1;
+  }
+
+  .asset-badge-dollar {
+    @apply bg-dollar/10 text-dollar border border-dollar/20 rounded-full px-3 py-1;
+  }
+
+  .asset-badge-euro {
+    @apply bg-euro/10 text-euro border border-euro/20 rounded-full px-3 py-1;
+  }
+
+  .input-animation {
+    @apply transition-all duration-300 ease-in-out transform;
+  }
+  
+  .input-animation:focus {
+    @apply scale-[1.02];
+  }
+  
+  /* Modern button styles */
+  .btn-modern {
+    @apply relative overflow-hidden rounded-lg transition-all duration-300 
+           after:absolute after:inset-0 after:z-[-1] after:opacity-0 
+           after:transition-opacity hover:after:opacity-100 
+           after:bg-gradient-to-r;
+  }
+  
+  /* Modern card hover effect */
+  .card-hover-effect {
+    @apply relative overflow-hidden before:absolute before:inset-0 before:-z-10
+           before:translate-y-[100%] before:bg-gradient-to-t before:from-white/10
+           before:to-transparent before:transition-transform before:duration-500
+           hover:before:translate-y-[0%];
+  }
+}
+
+.fade-in-section {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.fade-in-section.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Modern scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* Custom animated background */
+.animated-gradient {
+  background: linear-gradient(-45deg, #eeeeee, #f5f5f5, #fafafa, #ffffff);
+  background-size: 400% 400%;
+  animation: gradient 15s ease infinite;
+}
+
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Floating animation for UI elements */
+.float-animation {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+/* Shimmer loading effect */
+.shimmer {
+  background: linear-gradient(90deg, 
+    rgba(255, 255, 255, 0),
+    rgba(255, 255, 255, 0.5),
+    rgba(255, 255, 255, 0)
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
