@@ -1,69 +1,86 @@
-# Welcome to your Lovable project
+<div align="center">
+  
+# 📈 Profit Margin Calculator
 
-## Project info
+### Yatırımlarınızı Akıllıca Yönetin
 
-**URL**: https://lovable.dev/projects/deaf6b3f-2d44-4339-96b5-0cf54f3a1f1a
+[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+[![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/)
 
-## How can I edit this code?
+<p align="center">
+  <img src="public/preview.gif" alt="Preview" width="600px" />
+</p>
 
-There are several ways of editing your application.
+</div>
 
-**Use Lovable**
+## 🌟 Özellikler
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/deaf6b3f-2d44-4339-96b5-0cf54f3a1f1a) and start prompting.
+- 💰 Altın, Dolar ve Euro yatırımlarınızı takip edin
+- 📊 Gerçek zamanlı kur bilgileri
+- 📈 Kar/zarar analizleri
+- 🔄 Otomatik portföy güncelleme
+- 🌙 Koyu/açık tema desteği
+- 🌐 Çoklu dil desteği (TR/EN)
+- 🔐 Google hesabı ile güvenli giriş
+- ☁️ Firebase ile gerçek zamanlı veri senkronizasyonu
 
-Changes made via Lovable will be committed automatically to this repo.
+## 🚀 Kurulum
 
-**Use your preferred IDE**
+```bash
+# Projeyi klonlayın
+git clone https://github.com/username/profit-margin-cards.git
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+# Proje dizinine gidin
+cd profit-margin-cards
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+# Bağımlılıkları yükleyin
+npm install
 
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Geliştirme sunucusunu başlatın
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## 🛠️ Teknolojiler
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+| Teknoloji | Açıklama |
+|-----------|-----------|
+| React + Vite | Modern web geliştirme |
+| TypeScript | Tip güvenliği |
+| Tailwind CSS | Stil ve tasarım |
+| shadcn/ui | Modern UI bileşenleri |
+| Firebase | Backend ve kimlik doğrulama |
+| React Query | Veri yönetimi |
+| Framer Motion | Animasyonlar |
 
-**Use GitHub Codespaces**
+## 📱 Responsive Tasarım
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+<p align="center">
+  <img src="public/responsive.png" alt="Responsive Design" width="800px" />
+</p>
 
-## What technologies are used for this project?
+## 🤝 Katkıda Bulunma
 
-This project is built with .
+1. Bu depoyu fork edin
+2. Yeni bir özellik branch'i oluşturun (`git checkout -b feature/amazing`)
+3. Değişikliklerinizi commit edin (`git commit -m 'Harika özellik eklendi'`)
+4. Branch'inizi push edin (`git push origin feature/amazing`)
+5. Bir Pull Request oluşturun
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## 📄 Lisans
 
-## How can I deploy this project?
+Bu proje MIT lisansı altında lisanslanmıştır. Detaylı bilgi için [LICENSE](LICENSE) dosyasına bakın.
 
-Simply open [Lovable](https://lovable.dev/projects/deaf6b3f-2d44-4339-96b5-0cf54f3a1f1a) and click on Share -> Publish.
+## 🙏 Teşekkürler
 
-## I want to use a custom domain - is that possible?
+Bu projeyi geliştirmemde yardımcı olan herkese teşekkürler!
 
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+<div align="center">
+  <br />
+  <p>
+    <a href="https://lovable.dev">
+      🚀 Lovable ile Geliştirildi
+    </a>
+  </p>
+</div>
