@@ -1,21 +1,12 @@
-
 import { useState } from "react";
 import { AssetType } from "@/lib/constants";
+import type { Investment } from "@/lib/constants";
 import AssetCard from "./AssetCard";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { PlusCircle } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
-
-interface Investment {
-  id: string;
-  date: Date;
-  type: AssetType;
-  amount: number;
-  exchangeRate: number;
-  tlValue: number;
-}
 
 interface InvestmentsListProps {
   investments: Investment[];
@@ -89,12 +80,7 @@ const InvestmentsList = ({ investments, onDeleteInvestment }: InvestmentsListPro
               layout
             >
               <AssetCard
-                id={investment.id}
-                date={investment.date}
-                type={investment.type}
-                amount={investment.amount}
-                exchangeRate={investment.exchangeRate}
-                tlValue={investment.tlValue}
+                {...investment}
                 onDelete={() => onDeleteInvestment(investment.id)}
               />
             </motion.div>

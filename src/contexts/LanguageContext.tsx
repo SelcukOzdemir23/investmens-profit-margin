@@ -53,7 +53,12 @@ export const translations: Translations = {
     currentMarket: "Live Market Rates",
     lastUpdate: "Last Update",
     usDollar: "US Dollar",
-    goldGram: "Gold (gram)"
+    goldGram: "Gold (gram)",
+    currentRate: "Current Rate",
+    initialValue: "Initial Value",
+    errorRates: "Error Fetching Rates",
+    errorRatesDescription: "Could not fetch current exchange rates. Please try again.",
+    marketRates: "Market Rates"
   },
   tr: {
     appTitle: "Yatırım Takipçisi",
@@ -99,7 +104,12 @@ export const translations: Translations = {
     lastUpdate: "Son Güncelleme",
     usDollar: "Amerikan Doları",
     euroCurrency: "Euro",
-    goldGram: "Gram Altın"
+    goldGram: "Gram Altın",
+    currentRate: "Güncel Kur",
+    initialValue: "Başlangıç Değeri",
+    errorRates: "Kur Bilgisi Alınamadı",
+    errorRatesDescription: "Güncel kur bilgileri alınamadı. Lütfen tekrar deneyin.",
+    marketRates: "Piyasa Kurları"
   }
 };
 

@@ -1,10 +1,9 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { tr as dateFnsTr } from "date-fns/locale";
 import { Calendar as CalendarIcon } from "lucide-react";
-import { AssetType, AssetLabel } from "@/lib/constants";
-import { calculateTLValue } from "@/utils/assetCalculator";
+import { AssetType, AssetLabel, FINANCE_API_URL } from "@/lib/constants";
+import type { Investment, FinanceApiResponse } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -27,13 +26,7 @@ import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface AssetFormProps {
-  onAddAsset: (asset: {
-    type: AssetType;
-    amount: number;
-    date: Date;
-    exchangeRate: number;
-    tlValue: number;
-  }) => void;
+  onAddAsset: (asset: Investment) => void;
 }
 
 const AssetForm = ({ onAddAsset }: AssetFormProps) => {
@@ -41,7 +34,37 @@ const AssetForm = ({ onAddAsset }: AssetFormProps) => {
   const [assetType, setAssetType] = useState<AssetType>(AssetType.GOLD);
   const [amount, setAmount] = useState<string>("");
   const [date, setDate] = useState<Date>(new Date());
+  const [currentRates, setCurrentRates] = useState<FinanceApiResponse | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Fetch current rates when component mounts
+  useEffect(() => {
+    const fetchRates = async () => {
+      try {
+        const response = await fetch(FINANCE_API_URL);
+        const data: FinanceApiResponse = await response.json();
+        setCurrentRates(data);
+      } catch (error) {
+        console.error("Error fetching rates:", error);
+      }
+    };
+    fetchRates();
+  }, []);
+
+  const getCurrentRate = () => {
+    if (!currentRates) return null;
+
+    switch (assetType) {
+      case AssetType.GOLD:
+        return parseFloat(currentRates["gram-altin"].Alış.replace(",", "."));
+      case AssetType.DOLLAR:
+        return parseFloat(currentRates.USD.Alış.replace(",", "."));
+      case AssetType.EURO:
+        return parseFloat(currentRates.EUR.Alış.replace(",", "."));
+      default:
+        return null;
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,23 +78,35 @@ const AssetForm = ({ onAddAsset }: AssetFormProps) => {
       return;
     }
 
+    if (!currentRates) {
+      toast({
+        title: t("errorRates"),
+        description: t("errorRatesDescription"),
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     
     try {
-      // Calculate TL value based on selected date
-      const { exchangeRate, tlValue } = await calculateTLValue(
-        assetType,
-        parseFloat(amount),
-        date
-      );
+      const amountValue = parseFloat(amount);
+      const buyingRate = getCurrentRate();
+      
+      if (!buyingRate) {
+        throw new Error("Could not get current rate");
+      }
+
+      const tlValueThen = amountValue * buyingRate;
       
       // Add new asset entry
       onAddAsset({
+        id: crypto.randomUUID(),
         type: assetType,
-        amount: parseFloat(amount),
+        amount: amountValue,
+        buyingRate,
+        tlValueThen,
         date,
-        exchangeRate,
-        tlValue,
       });
       
       // Reset form
@@ -143,6 +178,14 @@ const AssetForm = ({ onAddAsset }: AssetFormProps) => {
             className="input-animation bg-white/60 backdrop-blur-xs"
             required
           />
+          {currentRates && (
+            <p className="text-xs text-muted-foreground mt-1">
+              {t("currentRate")}: {getCurrentRate()?.toLocaleString(language === 'tr' ? 'tr-TR' : 'en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+              })} ₺
+            </p>
+          )}
         </div>
 
         <div className="space-y-1">
@@ -154,7 +197,7 @@ const AssetForm = ({ onAddAsset }: AssetFormProps) => {
                 className="w-full justify-start text-left font-normal input-animation bg-white/60 backdrop-blur-xs"
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {date ? format(date, "PPP") : <span>{t("selectDate")}</span>}
+                {date ? format(date, "PPP", { locale: language === "tr" ? dateFnsTr : undefined }) : <span>{t("selectDate")}</span>}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">

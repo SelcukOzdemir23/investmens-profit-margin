@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { v4 as uuidv4 } from "uuid";
+import { AssetType } from "@/lib/constants";
+import type { Investment } from "@/lib/constants";
 import AssetForm from "@/components/AssetForm";
 import InvestmentsList from "@/components/InvestmentsList";
 import CurrentMarketData from "@/components/CurrentMarketData";
 import { useAuth } from '../contexts/AuthContext';
 import LanguageSelector from "@/components/LanguageSelector";
-import { AssetType } from "@/lib/constants";
 import {
   collection,
   addDoc,
@@ -19,57 +19,30 @@ import {
 import { Coins } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
-
-interface Investment {
-  id: string;
-  date: Date;
-  type: AssetType;
-  amount: number;
-  exchangeRate: number;
-  tlValue: number;
-}
 import { db } from '../firebase';
 
 const Index = () => {
   const { user } = useAuth();
-  console.log(user)
-  const { t } = useLanguage()
-  const [investments, setInvestments] = useState<Investment[]>(() => {
-    // Load from localStorage on initial render
-    const savedInvestments = localStorage.getItem("investments");
-    if (savedInvestments) {
-      try {
-        // Parse dates properly from JSON
-        const parsed = JSON.parse(savedInvestments);
-        return parsed.map((inv: any) => ({
-          ...inv,
-          date: new Date(inv.date)
-        }));
-      } catch (error) {
-        console.error("Failed to parse investments:", error);
-        return [];
-      }
-    }
-    return [];
-  });
+  const { t } = useLanguage();
+  const [investments, setInvestments] = useState<Investment[]>([]);
 
-  const investmentsCollectionRef = collection(db, 'investments'); // Define Firestore collection
-
+  const investmentsCollectionRef = collection(db, 'investments');
 
   useEffect(() => {
     const fetchInvestments = async () => {
-      if (!user) return; // Check for user
+      if (!user) return;
 
       try {
-        const q = query(investmentsCollectionRef, where('userId', '==', user.uid)); // Query user's investments
+        const q = query(investmentsCollectionRef, where('userId', '==', user.uid));
         const querySnapshot = await getDocs(q);
-        const fetchedInvestments: Investment[] = querySnapshot.docs.map(
-          (doc) => ({
-            id: doc.id, // Include Firestore document ID
-            ...(doc.data() as Omit<Investment, 'id'>), // Spread the rest of the data
-            date: doc.data().date.toDate()
-          })
-        );
+        const fetchedInvestments: Investment[] = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          type: doc.data().type,
+          amount: doc.data().amount,
+          buyingRate: doc.data().buyingRate,
+          tlValueThen: doc.data().tlValueThen,
+          date: doc.data().date.toDate()
+        }));
         setInvestments(fetchedInvestments);
       } catch (error) {
         console.error('Error fetching investments from Firestore:', error);
@@ -77,43 +50,44 @@ const Index = () => {
     };
 
     fetchInvestments();
-  }, [user]);
+  }, [user, investmentsCollectionRef]);
 
-  const {logout} = useAuth()
-  const handleAddAsset = async (asset: {
-    type: AssetType;
-    amount: number;
-    date: Date;
-    exchangeRate: number;
-    tlValue: number;
-  }) => {
-    if (!user) return; // Check for user
-
-    const newInvestment: Investment = {
-      id: uuidv4(),
-      ...asset,
-    };
+  const handleAddAsset = async (newInvestment: Investment) => {
+    if (!user) return;
 
     try {
-      await addDoc(investmentsCollectionRef, {
+      // Add to Firestore
+      const docRef = await addDoc(investmentsCollectionRef, {
         ...newInvestment,
-        userId: user.uid, // Store user ID
+        userId: user.uid,
+        date: newInvestment.date // Firestore handles Date objects automatically
       });
-      setInvestments((prev) => [newInvestment, ...prev]);
+
+      // Update local state
+      setInvestments(prev => [{
+        ...newInvestment,
+        id: docRef.id
+      }, ...prev]);
     } catch (error) {
       console.error('Error adding investment to Firestore:', error);
     }
   };
 
   const handleDeleteInvestment = async (id: string) => {
-    const docRef = doc(db, 'investments', id);
+    if (!user) return;
+
     try {
-      await deleteDoc(docRef);
-      setInvestments((prev) => prev.filter(investment => investment.id !== id));
-    } catch (e) {
-      console.error('Error deleting investment', e);
+      // Delete from Firestore
+      await deleteDoc(doc(db, 'investments', id));
+      
+      // Update local state
+      setInvestments(prev => prev.filter(investment => investment.id !== id));
+    } catch (error) {
+      console.error('Error deleting investment:', error);
     }
   };
+
+  const {logout} = useAuth();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-secondary/20">
@@ -130,32 +104,32 @@ const Index = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: "easeOut" }}
           >
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="flex flex-col items-center"
-          >
-            <div className="bg-primary/10 p-4 rounded-full mb-4 backdrop-blur-sm">
-              <Coins className="h-10 w-10 text-primary" />
-            </div>
-            <h1 className="text-4xl font-bold mb-2 tracking-tight bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-              {t("appTitle")}
-            </h1>
-            <p className="text-muted-foreground max-w-md mx-auto">
-              {t("appDescription")}
-            </p>
-          {user ? (
-            <div className="text-muted-foreground mt-4 flex flex-col items-center">
-              {t("welcome")} {user.displayName}! <br/>
-              <div>{user.email}</div>
-              <Button className="mt-4" variant={"destructive"} onClick={logout}>
-                {t("logout")}
-              </Button>
-            </div>
-          ) : (
-            <div></div>
-          )}
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="flex flex-col items-center"
+            >
+              <div className="bg-primary/10 p-4 rounded-full mb-4 backdrop-blur-sm">
+                <Coins className="h-10 w-10 text-primary" />
+              </div>
+              <h1 className="text-4xl font-bold mb-2 tracking-tight bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                {t("appTitle")}
+              </h1>
+              <p className="text-muted-foreground max-w-md mx-auto">
+                {t("appDescription")}
+              </p>
+              {user ? (
+                <div className="text-muted-foreground mt-4 flex flex-col items-center">
+                  {t("welcome")} {user.displayName}! <br/>
+                  <div>{user.email}</div>
+                  <Button className="mt-4" variant={"destructive"} onClick={logout}>
+                    {t("logout")}
+                  </Button>
+                </div>
+              ) : (
+                <div></div>
+              )}
             </motion.div>
           </motion.div>
         </header>
