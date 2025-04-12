@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 
 type Language = "en" | "tr";
@@ -49,6 +48,12 @@ export const translations: Translations = {
     deleteInvestment: "Delete Investment",
     deleteInvestmentConfirm: "Are you sure you want to delete this investment?",
     loading: "Loading...",
+    buyingRate: "Buying Rate",
+    sellingRate: "Selling Rate",
+    currentMarket: "Live Market Rates",
+    lastUpdate: "Last Update",
+    usDollar: "US Dollar",
+    goldGram: "Gold (gram)"
   },
   tr: {
     appTitle: "Yatırım Takipçisi",
@@ -88,6 +93,13 @@ export const translations: Translations = {
     deleteInvestment: "Yatırımı Sil",
     deleteInvestmentConfirm: "Bu yatırımı silmek istediğinizden emin misiniz?",
     loading: "Yükleniyor...",
+    buyingRate: "Alış",
+    sellingRate: "Satış",
+    currentMarket: "Güncel Piyasa Kurları",
+    lastUpdate: "Son Güncelleme",
+    usDollar: "Amerikan Doları",
+    euroCurrency: "Euro",
+    goldGram: "Gram Altın"
   }
 };
 

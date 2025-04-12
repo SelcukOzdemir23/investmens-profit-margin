@@ -1,9 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { v4 as uuidv4 } from "uuid";
 import AssetForm from "@/components/AssetForm";
 import InvestmentsList from "@/components/InvestmentsList";
+import CurrentMarketData from "@/components/CurrentMarketData";
 import { useAuth } from '../contexts/AuthContext';
 import LanguageSelector from "@/components/LanguageSelector";
 import { AssetType } from "@/lib/constants";
@@ -159,6 +159,10 @@ const Index = () => {
             </motion.div>
           </motion.div>
         </header>
+
+        <div className="mb-8">
+          <CurrentMarketData />
+        </div>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
