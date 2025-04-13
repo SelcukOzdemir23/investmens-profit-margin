@@ -1,186 +1,124 @@
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { useLanguage } from "@/contexts/LanguageContext";
 import { Card } from "@/components/ui/card";
-import { ArrowUp, ArrowDown, Coins, DollarSign, Euro, RefreshCcw } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-
-interface MarketData {
-  USD: {
-    Alış: string;
-    Satış: string;
-    Değişim: string;
-  };
-  EUR: {
-    Alış: string;
-    Satış: string;
-    Değişim: string;
-  };
-  "gram-altin": {
-    Alış: string;
-    Satış: string;
-    Değişim: string;
-  };
-  Update_Date: string;
-}
+import { Coins, DollarSign, Euro } from "lucide-react";
+import { FINANCE_API_URL } from "@/lib/constants";
+import { useLanguage } from "@/contexts/LanguageContext";
+import type { FinanceApiResponse } from "@/lib/constants";
 
 const CurrentMarketData = () => {
-  const [marketData, setMarketData] = useState<MarketData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { t, language } = useLanguage();
+  const [data, setData] = useState<FinanceApiResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<string>("");
-  const { t } = useLanguage();
-
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch("https://finans.truncgil.com/today.json");
-      const data = await response.json();
-      setMarketData(data);
-      setLastUpdate(new Date().toLocaleTimeString());
-    } catch (error) {
-      console.error("Error fetching market data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
-    fetchData();
-    // Update every 5 minutes
-    const interval = setInterval(fetchData, 5 * 60 * 1000);
+    const fetchRates = async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetch(FINANCE_API_URL);
+        if (!response.ok) throw new Error("API request failed");
+        const jsonData = await response.json();
+        setData(jsonData);
+        setLastUpdate(new Date().toLocaleTimeString());
+      } catch (error) {
+        console.error("Error fetching rates:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchRates();
+    const interval = setInterval(fetchRates, 5 * 60 * 1000); // Refresh every 5 minutes
     return () => clearInterval(interval);
   }, []);
 
-  const formatChange = (change: string) => {
-    const value = parseFloat(change.replace("%", "").replace(",", "."));
-    return {
-      value,
-      isPositive: value > 0,
-      isNegative: value < 0,
-    };
+  const formatNumber = (value: number) => {
+    return value.toLocaleString(language === 'tr' ? 'tr-TR' : 'en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
   };
 
-  const MarketCard = ({ 
-    title, 
-    icon: Icon, 
-    buyRate, 
-    sellRate, 
-    change,
-    iconClass
-  }: { 
-    title: string;
-    icon: any;
-    buyRate: string;
-    sellRate: string;
-    change: string;
-    iconClass: string;
-  }) => {
-    const { value, isPositive, isNegative } = formatChange(change);
-    
-    return (
-      <Card className="relative overflow-hidden bg-white/50 backdrop-blur-sm border-border/50">
-        <div className="p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Icon className={`h-5 w-5 ${iconClass}`} />
-            <h3 className="font-semibold">{title}</h3>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">{t("buyingRate")}</p>
-              <p className="text-lg font-semibold">{buyRate} ₺</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">{t("sellingRate")}</p>
-              <p className="text-lg font-semibold">{sellRate} ₺</p>
-            </div>
-          </div>
-          
-          <div className={`absolute top-3 right-3 px-2 py-1 rounded-full text-xs font-medium
-            ${isPositive ? 'bg-green-100 text-green-800' : 
-              isNegative ? 'bg-red-100 text-red-800' : 
-              'bg-gray-100 text-gray-800'}`}>
-            <div className="flex items-center gap-1">
-              {isPositive ? <ArrowUp className="h-3 w-3" /> : 
-               isNegative ? <ArrowDown className="h-3 w-3" /> : null}
-              {change}
-            </div>
-          </div>
+  const renderRateCard = (
+    icon: JSX.Element,
+    name: string,
+    buying: number,
+    selling: number,
+    change: number,
+    colorClass: string
+  ) => (
+    <Card className="p-4 glass-card">
+      <div className="flex items-center gap-2 mb-2">
+        {icon}
+        <h3 className="font-medium">{name}</h3>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <p className="text-xs text-muted-foreground">{t("buying")}</p>
+          <p className="font-medium">{formatNumber(buying)} ₺</p>
         </div>
-      </Card>
-    );
-  };
+        <div>
+          <p className="text-xs text-muted-foreground">{t("selling")}</p>
+          <p className="font-medium">{formatNumber(selling)} ₺</p>
+        </div>
+      </div>
+      <div className="mt-2">
+        <p className={`text-xs ${change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+          {change >= 0 ? '▲' : '▼'} {Math.abs(change)}%
+        </p>
+      </div>
+    </Card>
+  );
 
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         {[...Array(3)].map((_, i) => (
           <Card key={i} className="p-4">
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Skeleton className="h-5 w-5" />
-                <Skeleton className="h-4 w-24" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <Skeleton className="h-3 w-16" />
-                  <Skeleton className="h-6 w-24" />
-                </div>
-                <div className="space-y-1">
-                  <Skeleton className="h-3 w-16" />
-                  <Skeleton className="h-6 w-24" />
-                </div>
-              </div>
-            </div>
+            <Skeleton className="h-24 w-full" />
           </Card>
         ))}
       </div>
     );
   }
 
-  if (!marketData) return null;
-
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">{t("currentMarket")}</h2>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <RefreshCcw className="h-4 w-4" />
-          {t("lastUpdate")}: {lastUpdate}
-        </div>
+    <div className="space-y-4 mb-8">
+      <div className="flex justify-between items-center">
+        <h2 className="text-lg font-medium">{t("currentRates")}</h2>
+        <p className="text-xs text-muted-foreground">{t("lastUpdate")}: {lastUpdate}</p>
       </div>
-      
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="grid grid-cols-1 md:grid-cols-3 gap-4"
-      >
-        <MarketCard
-          title={t("dollar")}
-          icon={DollarSign}
-          buyRate={marketData.USD.Alış}
-          sellRate={marketData.USD.Satış}
-          change={marketData.USD.Değişim}
-          iconClass="text-emerald-600"
-        />
-        <MarketCard
-          title={t("euro")}
-          icon={Euro}
-          buyRate={marketData.EUR.Alış}
-          sellRate={marketData.EUR.Satış}
-          change={marketData.EUR.Değişim}
-          iconClass="text-blue-600"
-        />
-        <MarketCard
-          title={t("gold")}
-          icon={Coins}
-          buyRate={marketData["gram-altin"].Alış}
-          sellRate={marketData["gram-altin"].Satış}
-          change={marketData["gram-altin"].Değişim}
-          iconClass="text-yellow-600"
-        />
-      </motion.div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {data && (
+          <>
+            {renderRateCard(
+              <DollarSign className="h-5 w-5 text-dollar" />,
+              data.Rates.USD.Name,
+              data.Rates.USD.Buying,
+              data.Rates.USD.Selling,
+              data.Rates.USD.Change,
+              "text-dollar"
+            )}
+            {renderRateCard(
+              <Euro className="h-5 w-5 text-euro" />,
+              data.Rates.EUR.Name,
+              data.Rates.EUR.Buying,
+              data.Rates.EUR.Selling,
+              data.Rates.EUR.Change,
+              "text-euro"
+            )}
+            {renderRateCard(
+              <Coins className="h-5 w-5 text-gold" />,
+              data.Rates.GRA.Name,
+              data.Rates.GRA.Buying,
+              data.Rates.GRA.Selling,
+              data.Rates.GRA.Change,
+              "text-gold"
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 };

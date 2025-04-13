@@ -27,21 +27,38 @@ export const AssetLabel = {
 };
 
 // API URL
-export const FINANCE_API_URL = "https://finans.truncgil.com/today.json";
+export const FINANCE_API_URL = "https://finance.truncgil.com/api/today.json";
 
 // Interface for the API response
 export interface FinanceApiResponse {
-  Update_Date: string;
-  USD: CurrencyRate;
-  EUR: CurrencyRate;
-  "gram-altin": CurrencyRate;
-}
-
-export interface CurrencyRate {
-  Alış: string;
-  Satış: string;
-  Değişim: string;
-  Tür: string;
+  Meta_Data: {
+    Minutes_Ago: number;
+    Current_Date: string;
+    Update_Date: string;
+  };
+  Rates: {
+    USD: {
+      Type: string;
+      Change: number;
+      Name: string;
+      Buying: number;
+      Selling: number;
+    };
+    EUR: {
+      Type: string;
+      Change: number;
+      Name: string;
+      Buying: number;
+      Selling: number;
+    };
+    GRA: {
+      Type: string;
+      Change: number;
+      Name: string;
+      Buying: number;
+      Selling: number;
+    };
+  };
 }
 
 // Investment interface

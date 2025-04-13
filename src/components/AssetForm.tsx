@@ -36,54 +36,82 @@ const AssetForm = ({ onAddAsset }: AssetFormProps) => {
   const [date, setDate] = useState<Date>(new Date());
   const [currentRates, setCurrentRates] = useState<FinanceApiResponse | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
-  // Fetch current rates when component mounts
-  useEffect(() => {
-    const fetchRates = async () => {
-      try {
-        const response = await fetch(FINANCE_API_URL);
-        const data: FinanceApiResponse = await response.json();
-        setCurrentRates(data);
-      } catch (error) {
-        console.error("Error fetching rates:", error);
-      }
-    };
-    fetchRates();
-  }, []);
+  const validateForm = () => {
+    const amountValue = parseFloat(amount);
+    
+    if (!amount || isNaN(amountValue)) {
+      setValidationError(t("invalidAmount"));
+      return false;
+    }
+
+    if (amountValue <= 0) {
+      setValidationError(t("amountMustBePositive"));
+      return false;
+    }
+
+    if (!currentRates) {
+      setValidationError(t("noRatesAvailable"));
+      return false;
+    }
+
+    setValidationError(null);
+    return true;
+  };
 
   const getCurrentRate = () => {
     if (!currentRates) return null;
 
-    switch (assetType) {
-      case AssetType.GOLD:
-        return parseFloat(currentRates["gram-altin"].Alış.replace(",", "."));
-      case AssetType.DOLLAR:
-        return parseFloat(currentRates.USD.Alış.replace(",", "."));
-      case AssetType.EURO:
-        return parseFloat(currentRates.EUR.Alış.replace(",", "."));
-      default:
-        return null;
+    try {
+      switch (assetType) {
+        case AssetType.GOLD:
+          return currentRates.Rates.GRA.Buying;
+        case AssetType.DOLLAR:
+          return currentRates.Rates.USD.Buying;
+        case AssetType.EURO:
+          return currentRates.Rates.EUR.Buying;
+        default:
+          return null;
+      }
+    } catch (error) {
+      console.error("Error getting current rate:", error);
+      return null;
     }
   };
+
+  useEffect(() => {
+    const fetchRates = async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetch(FINANCE_API_URL);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        setCurrentRates(data);
+      } catch (error) {
+        console.error("Error fetching rates:", error);
+        toast({
+          title: t("errorRates"),
+          description: t("errorRatesDescription"),
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchRates();
+    const intervalId = setInterval(fetchRates, 5 * 60 * 1000); // Refresh every 5 minutes
+    return () => clearInterval(intervalId);
+  }, [t]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!amount || parseFloat(amount) <= 0) {
-      toast({
-        title: t("invalidAmount"),
-        description: t("invalidAmountDescription"),
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!currentRates) {
-      toast({
-        title: t("errorRates"),
-        description: t("errorRatesDescription"),
-        variant: "destructive",
-      });
+    if (!validateForm()) {
       return;
     }
 
@@ -94,7 +122,7 @@ const AssetForm = ({ onAddAsset }: AssetFormProps) => {
       const buyingRate = getCurrentRate();
       
       if (!buyingRate) {
-        throw new Error("Could not get current rate");
+        throw new Error(t("couldNotGetCurrentRate"));
       }
 
       const tlValueThen = amountValue * buyingRate;
@@ -111,6 +139,7 @@ const AssetForm = ({ onAddAsset }: AssetFormProps) => {
       
       // Reset form
       setAmount("");
+      setValidationError(null);
       
       // Show success message
       toast({
@@ -129,13 +158,6 @@ const AssetForm = ({ onAddAsset }: AssetFormProps) => {
     }
   };
 
-  // Translate asset labels
-  const assetLabels = {
-    [AssetType.GOLD]: t("gold"),
-    [AssetType.DOLLAR]: t("dollar"),
-    [AssetType.EURO]: t("euro"),
-  };
-
   return (
     <Card className="glass-card p-6 mb-8 animate-fade-in">
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -145,7 +167,10 @@ const AssetForm = ({ onAddAsset }: AssetFormProps) => {
           </Label>
           <Select
             value={assetType}
-            onValueChange={(value) => setAssetType(value as AssetType)}
+            onValueChange={(value) => {
+              setAssetType(value as AssetType);
+              setValidationError(null);
+            }}
           >
             <SelectTrigger 
               id="asset-type" 
@@ -156,7 +181,7 @@ const AssetForm = ({ onAddAsset }: AssetFormProps) => {
             <SelectContent>
               {Object.values(AssetType).map((type) => (
                 <SelectItem key={type} value={type}>
-                  {assetLabels[type] || AssetLabel[type]}
+                  {t(type.toLowerCase())}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -174,10 +199,19 @@ const AssetForm = ({ onAddAsset }: AssetFormProps) => {
             min="0"
             placeholder={assetType === AssetType.GOLD ? t("gramsOfGold") : t("amount")}
             value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            className="input-animation bg-white/60 backdrop-blur-xs"
+            onChange={(e) => {
+              setAmount(e.target.value);
+              setValidationError(null);
+            }}
+            className={cn(
+              "input-animation bg-white/60 backdrop-blur-xs",
+              validationError && "border-red-500 focus:ring-red-500"
+            )}
             required
           />
+          {validationError && (
+            <p className="text-sm text-red-500 mt-1">{validationError}</p>
+          )}
           {currentRates && (
             <p className="text-xs text-muted-foreground mt-1">
               {t("currentRate")}: {getCurrentRate()?.toLocaleString(language === 'tr' ? 'tr-TR' : 'en-US', {
@@ -194,7 +228,10 @@ const AssetForm = ({ onAddAsset }: AssetFormProps) => {
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
-                className="w-full justify-start text-left font-normal input-animation bg-white/60 backdrop-blur-xs"
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  "input-animation bg-white/60 backdrop-blur-xs"
+                )}
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 {date ? format(date, "PPP", { locale: language === "tr" ? dateFnsTr : undefined }) : <span>{t("selectDate")}</span>}
@@ -205,9 +242,9 @@ const AssetForm = ({ onAddAsset }: AssetFormProps) => {
                 mode="single"
                 selected={date}
                 onSelect={(date) => date && setDate(date)}
+                disabled={(date) => date > new Date() || date < new Date(2020, 0, 1)}
                 initialFocus
                 locale={language === "tr" ? dateFnsTr : undefined}
-                className={cn("p-3 pointer-events-auto")}
               />
             </PopoverContent>
           </Popover>
@@ -215,8 +252,11 @@ const AssetForm = ({ onAddAsset }: AssetFormProps) => {
 
         <Button 
           type="submit" 
-          className="w-full bg-primary hover:bg-primary/90 transition-all duration-300"
-          disabled={isSubmitting}
+          className={cn(
+            "w-full bg-primary hover:bg-primary/90 transition-all duration-300",
+            isSubmitting && "opacity-50 cursor-not-allowed"
+          )}
+          disabled={isSubmitting || isLoading}
         >
           {isSubmitting ? t("adding") : t("addInvestment")}
         </Button>

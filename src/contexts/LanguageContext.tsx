@@ -58,7 +58,8 @@ export const translations: Translations = {
     initialValue: "Initial Value",
     errorRates: "Error Fetching Rates",
     errorRatesDescription: "Could not fetch current exchange rates. Please try again.",
-    marketRates: "Market Rates"
+    marketRates: "Market Rates",
+    welcome: "Welcome"
   },
   tr: {
     appTitle: "Yatırım Takipçisi",
@@ -109,7 +110,8 @@ export const translations: Translations = {
     initialValue: "Başlangıç Değeri",
     errorRates: "Kur Bilgisi Alınamadı",
     errorRatesDescription: "Güncel kur bilgileri alınamadı. Lütfen tekrar deneyin.",
-    marketRates: "Piyasa Kurları"
+    marketRates: "Piyasa Kurları",
+    welcome: "Hoşgeldiniz"
   }
 };
 

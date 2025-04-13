@@ -1,40 +1,75 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState, Suspense } from "react";
+import { useNavigate } from "react-router-dom";
+import { collection, query, where, getDocs, addDoc, deleteDoc, doc } from "firebase/firestore";
+import { db } from "../firebase";
+import { useAuth } from "@/contexts/AuthContext";
 import { motion } from "framer-motion";
-import { AssetType } from "@/lib/constants";
-import type { Investment } from "@/lib/constants";
+import { Button } from "@/components/ui/button";
+import { LogOut } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { Investment } from "@/lib/constants";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import AssetForm from "@/components/AssetForm";
 import InvestmentsList from "@/components/InvestmentsList";
 import CurrentMarketData from "@/components/CurrentMarketData";
-import { useAuth } from '../contexts/AuthContext';
 import LanguageSelector from "@/components/LanguageSelector";
-import {
-  collection,
-  addDoc,
-  getDocs,
-  query,
-  where,
-  deleteDoc,
-  doc,
-} from 'firebase/firestore';
-import { Coins } from "lucide-react";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { Button } from "@/components/ui/button";
-import { db } from '../firebase';
+import { Skeleton } from "@/components/ui/skeleton";
+
+// Lazy loading components for better initial load performance
+const InvestmentsWrapper = ({ investments, onDelete, isLoading }: { 
+  investments: Investment[];
+  onDelete: (id: string) => Promise<void>;
+  isLoading: boolean;
+}) => (
+  <ErrorBoundary>
+    <Suspense fallback={<div className="space-y-4">
+      {[...Array(3)].map((_, i) => (
+        <Skeleton key={i} className="h-[200px] w-full" />
+      ))}
+    </div>}>
+      <InvestmentsList
+        investments={investments}
+        onDelete={onDelete}
+        isLoading={isLoading}
+      />
+    </Suspense>
+  </ErrorBoundary>
+);
+
+const MarketDataWrapper = () => (
+  <ErrorBoundary>
+    <Suspense fallback={<div className="space-y-4">
+      {[...Array(3)].map((_, i) => (
+        <Skeleton key={i} className="h-[100px] w-full" />
+      ))}
+    </div>}>
+      <CurrentMarketData />
+    </Suspense>
+  </ErrorBoundary>
+);
 
 const Index = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const { t } = useLanguage();
   const [investments, setInvestments] = useState<Investment[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const investmentsCollectionRef = collection(db, 'investments');
 
   useEffect(() => {
-    const fetchInvestments = async () => {
-      if (!user) return;
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
 
+    const fetchInvestments = async () => {
       try {
+        setIsLoading(true);
         const q = query(investmentsCollectionRef, where('userId', '==', user.uid));
         const querySnapshot = await getDocs(q);
+        
         const fetchedInvestments: Investment[] = querySnapshot.docs.map(doc => ({
           id: doc.id,
           type: doc.data().type,
@@ -43,33 +78,53 @@ const Index = () => {
           tlValueThen: doc.data().tlValueThen,
           date: doc.data().date.toDate()
         }));
+
+        // Sort investments by date, newest first
+        fetchedInvestments.sort((a, b) => b.date.getTime() - a.date.getTime());
         setInvestments(fetchedInvestments);
       } catch (error) {
-        console.error('Error fetching investments from Firestore:', error);
+        console.error('Error fetching investments:', error);
+        toast({
+          variant: "destructive",
+          title: t("errorFetchingInvestments"),
+          description: t("errorFetchingInvestmentsDescription")
+        });
+      } finally {
+        setIsLoading(false);
       }
     };
 
     fetchInvestments();
-  }, [user, investmentsCollectionRef]);
+  }, [user, investmentsCollectionRef, navigate, t]);
 
   const handleAddAsset = async (newInvestment: Investment) => {
     if (!user) return;
 
     try {
-      // Add to Firestore
+      // Add to Firestore with user ID
       const docRef = await addDoc(investmentsCollectionRef, {
         ...newInvestment,
         userId: user.uid,
         date: newInvestment.date // Firestore handles Date objects automatically
       });
 
-      // Update local state
+      // Update local state with the new investment at the beginning
       setInvestments(prev => [{
         ...newInvestment,
         id: docRef.id
       }, ...prev]);
+
+      toast({
+        title: t("investmentAdded"),
+        description: t("investmentAddedDescription")
+      });
     } catch (error) {
-      console.error('Error adding investment to Firestore:', error);
+      console.error('Error adding investment:', error);
+      toast({
+        variant: "destructive",
+        title: t("errorAddingInvestment"),
+        description: t("errorAddingInvestmentDescription")
+      });
     }
   };
 
@@ -82,92 +137,77 @@ const Index = () => {
       
       // Update local state
       setInvestments(prev => prev.filter(investment => investment.id !== id));
+
+      toast({
+        title: t("investmentDeleted"),
+        description: t("investmentDeletedDescription")
+      });
     } catch (error) {
       console.error('Error deleting investment:', error);
+      toast({
+        variant: "destructive",
+        title: t("errorDeletingInvestment"),
+        description: t("errorDeletingInvestmentDescription")
+      });
     }
   };
 
-  const {logout} = useAuth();
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/auth');
+    } catch (error) {
+      console.error('Error logging out:', error);
+      toast({
+        variant: "destructive",
+        title: t("errorLoggingOut"),
+        description: t("errorLoggingOutDescription")
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-secondary/20">
-      <LanguageSelector />
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, ease: "easeOut" }}
-        className="max-w-3xl mx-auto px-4 py-12"
-      >
-        <header className="text-center mb-12">
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className="flex flex-col items-center"
+      <div className="container mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+            {t("investments")}
+          </h1>
+          <div className="flex items-center gap-4">
+            <LanguageSelector />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+              className="gap-2"
             >
-              <div className="bg-primary/10 p-4 rounded-full mb-4 backdrop-blur-sm">
-                <Coins className="h-10 w-10 text-primary" />
-              </div>
-              <h1 className="text-4xl font-bold mb-2 tracking-tight bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                {t("appTitle")}
-              </h1>
-              <p className="text-muted-foreground max-w-md mx-auto">
-                {t("appDescription")}
-              </p>
-              {user ? (
-                <div className="text-muted-foreground mt-4 flex flex-col items-center">
-                  {t("welcome")} {user.displayName}! <br/>
-                  <div>{user.email}</div>
-                  <Button className="mt-4" variant={"destructive"} onClick={logout}>
-                    {t("logout")}
-                  </Button>
-                </div>
-              ) : (
-                <div></div>
-              )}
-            </motion.div>
-          </motion.div>
-        </header>
-
-        <div className="mb-8">
-          <CurrentMarketData />
+              <LogOut className="h-4 w-4" />
+              {t("logout")}
+            </Button>
+          </div>
         </div>
 
+        {/* Current Market Data */}
+        <MarketDataWrapper />
+
+        {/* Asset Form */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-          className="backdrop-blur-sm bg-white/10 rounded-xl p-6 border border-white/20 shadow-xl mb-8"
         >
-          <AssetForm onAddAsset={handleAddAsset} />
+          <ErrorBoundary>
+            <AssetForm onAddAsset={handleAddAsset} />
+          </ErrorBoundary>
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.6 }}
-        >
-          <h2 className="text-2xl font-semibold mb-6 flex items-center gap-2">
-            <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-              {t("yourInvestments")}
-            </span>
-            {investments.length > 0 && (
-              <span className="bg-primary/10 text-primary text-sm px-2 py-0.5 rounded-full">
-                {investments.length}
-              </span>
-            )}
-          </h2>
-          <InvestmentsList 
-            investments={investments} 
-            onDeleteInvestment={handleDeleteInvestment} 
-          />
-        </motion.div>
-      </motion.div>
+        {/* Investments List */}
+        <InvestmentsWrapper
+          investments={investments}
+          onDelete={handleDeleteInvestment}
+          isLoading={isLoading}
+        />
+      </div>
     </div>
   );
 };

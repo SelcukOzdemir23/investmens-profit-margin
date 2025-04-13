@@ -1,5 +1,5 @@
-
-import { AssetType, getExchangeRates, fetchExchangeRates } from "@/lib/constants";
+import { AssetType, FINANCE_API_URL } from "@/lib/constants";
+import type { FinanceApiResponse } from "@/lib/constants";
 
 export interface AssetEntry {
   id: string;
@@ -11,104 +11,92 @@ export interface AssetEntry {
 }
 
 // Cache for exchange rates to avoid unnecessary API calls
-let cachedRates: { [key in AssetType]: number } | null = null;
+let cachedRates: FinanceApiResponse | null = null;
 let lastFetchTime: number = 0;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-// Calculate TL value based on asset type, amount, and date
-export const calculateTLValue = async (
-  assetType: AssetType,
-  amount: number,
-  date: Date = new Date()
-): Promise<{ exchangeRate: number; tlValue: number }> => {
-  let rates;
-  
-  // If current date (today), use real-time rates from API
-  const isToday = new Date().toDateString() === date.toDateString();
-  
-  if (isToday) {
-    // Check if we have cached rates and if they're still valid
-    const now = Date.now();
-    if (cachedRates && (now - lastFetchTime < CACHE_DURATION)) {
-      rates = cachedRates;
-    } else {
-      // Fetch new rates from API
-      rates = await fetchExchangeRates();
-      // Update cache
-      cachedRates = rates;
-      lastFetchTime = now;
-    }
-  } else {
-    // For historical dates, use mock data
-    rates = getExchangeRates(date);
+export const fetchCurrentRates = async (): Promise<FinanceApiResponse> => {
+  const now = Date.now();
+  if (cachedRates && (now - lastFetchTime < CACHE_DURATION)) {
+    return cachedRates;
   }
-  
-  const exchangeRate = rates[assetType];
-  const tlValue = amount * exchangeRate;
-  
-  return {
-    exchangeRate,
-    tlValue
-  };
+
+  const response = await fetch(FINANCE_API_URL);
+  if (!response.ok) {
+    throw new Error('Failed to fetch current rates');
+  }
+
+  const data = await response.json();
+  cachedRates = data;
+  lastFetchTime = now;
+  return data;
 };
 
-// Calculate profit/loss between two dates
-export const calculateProfitMargin = async (
+export const getCurrentRate = (rates: FinanceApiResponse, assetType: AssetType): number => {
+  switch (assetType) {
+    case AssetType.GOLD:
+      return rates.Rates.GRA.Buying;
+    case AssetType.DOLLAR:
+      return rates.Rates.USD.Buying;
+    case AssetType.EURO:
+      return rates.Rates.EUR.Buying;
+    default:
+      throw new Error('Invalid asset type');
+  }
+};
+
+export interface ProfitCalculation {
+  grossProfit: number;     // FR-CALC-001: Sales Price - COGS (current value - initial value)
+  profitMargin: number;    // FR-CALC-002: (Gross Profit / Sales Price) * 100
+  currentValue: number;    // Current TRY value
+  currentRate: number;     // Current exchange rate
+}
+
+export const calculateProfit = async (
   assetType: AssetType,
   amount: number,
-  entryDate: Date,
-  currentDate: Date = new Date()
-): Promise<{
-  initialValue: number;
-  currentValue: number;
-  profitLossAmount: number;
-  profitLossPercentage: number;
-}> => {
-  const initialResult = await calculateTLValue(assetType, amount, entryDate);
-  const currentResult = await calculateTLValue(assetType, amount, currentDate);
+  initialValue: number
+): Promise<ProfitCalculation> => {
+  const rates = await fetchCurrentRates();
+  const currentRate = getCurrentRate(rates, assetType);
+  const currentValue = amount * currentRate;
   
-  const initialValue = initialResult.tlValue;
-  const currentValue = currentResult.tlValue;
+  // FR-CALC-001: Calculate Gross Profit (current value - initial value)
+  const grossProfit = currentValue - initialValue;
   
-  const profitLossAmount = currentValue - initialValue;
-  const profitLossPercentage = (profitLossAmount / initialValue) * 100;
-  
+  // FR-CALC-002: Calculate Profit Margin ((Gross Profit / Sales Price) * 100)
+  // If current value is 0, margin is treated as 0
+  const profitMargin = currentValue !== 0 
+    ? (grossProfit / currentValue) * 100 
+    : 0;
+
   return {
-    initialValue,
+    grossProfit,
+    profitMargin,
     currentValue,
-    profitLossAmount,
-    profitLossPercentage
+    currentRate
   };
 };
 
 // Format currency with the correct locale
 export const formatCurrency = (
   value: number,
-  currency: string = "TRY",
-  locale: string = "tr-TR"
+  locale: string = "tr-TR",
+  currency: string = "TRY"
 ): string => {
   return new Intl.NumberFormat(locale, {
     style: "currency",
-    currency: currency,
+    currency,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   }).format(value);
 };
 
-// Format percentage
-export const formatPercentage = (value: number): string => {
-  return new Intl.NumberFormat("tr-TR", {
+// Format percentage with 2 decimal places
+export const formatPercentage = (value: number, locale: string = "tr-TR"): string => {
+  return new Intl.NumberFormat(locale, {
     style: "percent",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   }).format(value / 100);
-};
-
-// Format date
-export const formatDate = (date: Date): string => {
-  return new Intl.DateTimeFormat("tr-TR", {
-    year: "numeric",
-    month: "long",
-    day: "numeric"
-  }).format(date);
 };

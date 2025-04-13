@@ -3,11 +3,15 @@ import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
 import { auth } from '../firebase';
 import { useToast } from '@/components/ui/use-toast';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { motion } from 'framer-motion';
+import { cn } from "@/lib/utils";
 
 const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t } = useLanguage();
+  const [isLoading, setIsLoading] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
 
   useEffect(() => {
@@ -21,23 +25,26 @@ const Auth = () => {
   }, [navigate]);
 
   const handleGoogleSignIn = async () => {
+    setIsLoading(true);
     const provider = new GoogleAuthProvider();
 
     try {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
       toast({
-        title: 'Success',
-        description: `Welcome ${user.displayName}!`,
+        title: t('loginSuccess'),
+        description: `${t('welcome')} ${user.displayName}!`,
       });
       navigate('/');
     } catch (error) {
       console.error('Error signing in with Google:', error);
       toast({
         variant: 'destructive',
-        title: 'Error signing in',
-        description: 'There was an error signing in. Please try again.',
+        title: t('loginError'),
+        description: t('tryAgain'),
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -74,10 +81,10 @@ const Auth = () => {
               className="space-y-2 text-center"
             >
               <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                Profit Margin Calculator
+                {t('appName')}
               </h1>
               <p className="text-muted-foreground">
-                Yatırımlarınızı akıllıca yönetin ve takip edin
+                {t('appDescription')}
               </p>
             </motion.div>
 
@@ -85,22 +92,28 @@ const Auth = () => {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={handleGoogleSignIn}
-              className="w-full flex items-center justify-center gap-3 p-4 rounded-lg bg-white hover:bg-gray-50 text-gray-700 font-medium shadow-md hover:shadow-lg transition-all duration-200 border border-gray-200"
+              disabled={isLoading}
+              className={cn(
+                "w-full flex items-center justify-center gap-3 p-4 rounded-lg",
+                "bg-white hover:bg-gray-50 text-gray-700 font-medium",
+                "shadow-md hover:shadow-lg transition-all duration-200",
+                "border border-gray-200",
+                "disabled:opacity-50 disabled:cursor-not-allowed"
+              )}
             >
               <img
                 src="https://www.google.com/favicon.ico"
                 alt="Google"
                 className="w-5 h-5"
               />
-              Google ile Devam Et
+              {isLoading ? t('signingIn') : t('continueWithGoogle')}
             </motion.button>
 
             <div className="text-xs text-center text-muted-foreground">
-              Giriş yaparak{' '}
+              {t('termsNotice')}{' '}
               <a href="#" className="underline hover:text-primary">
-                Kullanım Koşullarını
-              </a>{' '}
-              kabul etmiş olursunuz
+                {t('termsOfService')}
+              </a>
             </div>
           </div>
 
@@ -111,7 +124,7 @@ const Auth = () => {
             className="mt-8 text-center text-sm text-muted-foreground"
           >
             <p>
-              Basit ve güvenli giriş için sadece Google hesabınızı kullanıyoruz.
+              {t('securityNotice')}
             </p>
           </motion.div>
         </motion.div>

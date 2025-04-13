@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import { tr as dateFnsTr } from "date-fns/locale";
 import { motion } from "framer-motion";
@@ -24,24 +24,23 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
+import {
+  Alert,
+  AlertTitle,
+  AlertDescription,
+} from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "./ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Card } from "./ui/card";
 import { Skeleton } from "./ui/skeleton";
+import { cn } from "@/lib/utils";
 
 interface AssetCardProps extends Investment {
   onDelete: () => void;
 }
 
-const AssetCard = ({ 
-  id, 
-  date, 
-  type, 
-  amount,
-  buyingRate,
-  tlValueThen,
-  onDelete 
-}: AssetCardProps) => {
+const AssetCard = ({ id, date, type, amount, buyingRate, tlValueThen, onDelete }: AssetCardProps) => {
   const { t, language } = useLanguage();
   const [currentRate, setCurrentRate] = useState<number | null>(null);
   const [tlValue, setTlValue] = useState<number | null>(null);
@@ -50,57 +49,77 @@ const AssetCard = ({
   const [isLoading, setIsLoading] = useState(true);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<string>("");
+  const [error, setError] = useState<string | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
 
-  const fetchCurrentRates = async () => {
-    setIsLoading(true);
+  const parseRate = (rateStr: string): number => {
+    return parseFloat(rateStr.replace('.', '').replace(',', '.'));
+  };
+
+  const fetchCurrentRates = useCallback(async () => {
+    // Don't fetch if already updating
+    if (isUpdating) return;
+    
+    setIsUpdating(true);
+    setError(null);
+    
     try {
       const response = await fetch(FINANCE_API_URL);
-      const data: FinanceApiResponse = await response.json();
-      
-      let rate: number;
-      switch (type) {
-        case AssetType.GOLD:
-          rate = parseFloat(data["gram-altin"].Alış.replace(",", "."));
-          break;
-        case AssetType.DOLLAR:
-          rate = parseFloat(data.USD.Alış.replace(",", "."));
-          break;
-        case AssetType.EURO:
-          rate = parseFloat(data.EUR.Alış.replace(",", "."));
-          break;
-        default:
-          throw new Error("Unknown asset type");
+      if (!response.ok) {
+        throw new Error(t("apiRequestFailed"));
       }
       
-      setCurrentRate(rate);
+      const data: FinanceApiResponse = await response.json();
+      let rate: number;
+      
+      switch (type) {
+        case AssetType.GOLD:
+          rate = data.Rates.GRA.Buying;
+          break;
+        case AssetType.DOLLAR:
+          rate = data.Rates.USD.Buying;
+          break;
+        case AssetType.EURO:
+          rate = data.Rates.EUR.Buying;
+          break;
+        default:
+          throw new Error(t("unknownAssetType"));
+      }
+
+      if (isNaN(rate) || rate <= 0) {
+        throw new Error(t("invalidRate"));
+      }
+
       const currentTlValue = amount * rate;
-      setTlValue(currentTlValue);
-      
-      // Calculate profit/loss
       const profit = currentTlValue - tlValueThen;
-      setProfitMargin(profit);
-      
-      // Calculate profit percentage
       const percentage = (profit / tlValueThen) * 100;
+
+      setCurrentRate(rate);
+      setTlValue(currentTlValue);
+      setProfitMargin(profit);
       setProfitPercentage(percentage);
-      
       setLastUpdate(new Date().toLocaleTimeString());
     } catch (error) {
       console.error("Error calculating current value:", error);
-      setCurrentRate(null);
-      setTlValue(null);
-      setProfitMargin(null);
-      setProfitPercentage(null);
+      setError(error instanceof Error ? error.message : t("unknownError"));
     } finally {
       setIsLoading(false);
+      setIsUpdating(false);
     }
-  };
+  }, [amount, tlValueThen, type, t, isUpdating]);
 
   useEffect(() => {
+    // Initial fetch
     fetchCurrentRates();
-    const interval = setInterval(fetchCurrentRates, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [type, amount, tlValueThen]);
+
+    // Set up interval
+    const intervalId = setInterval(fetchCurrentRates, 5 * 60 * 1000);
+
+    // Cleanup
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [fetchCurrentRates]);
 
   const renderIcon = () => {
     switch (type) {
@@ -128,7 +147,6 @@ const AssetCard = ({
     }
   };
 
-  // Format currency
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat(language === 'tr' ? 'tr-TR' : 'en-US', {
       style: 'currency',
@@ -137,7 +155,6 @@ const AssetCard = ({
     }).format(value);
   };
 
-  // Format percentage
   const formatPercentage = (value: number) => {
     return new Intl.NumberFormat(language === 'tr' ? 'tr-TR' : 'en-US', {
       style: 'percent',
@@ -146,7 +163,6 @@ const AssetCard = ({
     }).format(value / 100);
   };
 
-  // Format number with decimals
   const formatNumber = (value: number | null | undefined) => {
     if (value === null || value === undefined) return "N/A";
     return value.toLocaleString(language === 'tr' ? 'tr-TR' : 'en-US', {
@@ -155,128 +171,124 @@ const AssetCard = ({
     });
   };
 
+  const getProfitLossColor = (value: number) => {
+    if (value > 5) return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+    if (value < -5) return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+    if (value > 0) return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300';
+    if (value < 0) return 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300';
+    return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
+  };
+
+  const getProfitLossStyle = (value: number) => {
+    if (Math.abs(value) > 10) return 'scale-110 font-bold';
+    if (Math.abs(value) > 5) return 'scale-105 font-semibold';
+    return '';
+  };
+
   return (
     <>
       <motion.div
-        whileHover={{ scale: 1.01 }}
-        className="glass-card overflow-hidden"
+        layout
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+        transition={{ duration: 0.2 }}
+        className={cn("relative", isUpdating && "opacity-80")}
       >
-        <Card className="p-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            {/* Asset Information */}
-            <div className="flex-1">
-              <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-                <div className="flex items-center gap-2">
-                  <span className={`${getTypeClass()} flex items-center gap-1 px-2 py-1 rounded-full`}>
-                    {renderIcon()}
-                    <span>{t(type.toLowerCase())}</span>
-                  </span>
-                  <span className="text-sm text-muted-foreground">
-                    {format(date, language === 'tr' ? 'dd MMMM yyyy' : 'MMMM dd, yyyy', {
-                      locale: language === 'tr' ? dateFnsTr : undefined
-                    })}
-                  </span>
+        <Card className="overflow-hidden">
+          <div className="p-6">
+            {/* Asset Type Header */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className={`p-2 rounded-full ${getTypeClass()}`}>
+                  {renderIcon()}
                 </div>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <RefreshCw className="h-3 w-3" />
-                  {lastUpdate}
+                <div>
+                  <p className="font-medium">{t(type.toLowerCase())}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {format(new Date(date), 'PP', { locale: language === 'tr' ? dateFnsTr : undefined })}
+                  </p>
                 </div>
               </div>
-              
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div className="space-y-1">
+              {!isLoading && (
+                <p className="text-xs text-muted-foreground">
+                  {t("lastUpdate")}: {lastUpdate}
+                </p>
+              )}
+            </div>
+
+            {/* Main Content */}
+            <div className="space-y-4">
+              {/* Amount and Rate Info */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
                   <p className="text-xs text-muted-foreground">{t("amount")}</p>
                   <p className="font-medium">
-                    {formatNumber(amount)}
-                    {type === AssetType.GOLD ? " gr" : ""}
+                    {type === AssetType.GOLD ? amount : formatNumber(amount)}
                   </p>
                 </div>
-                
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">{t("buyingRate")}</p>
-                  <p className="font-medium">
-                    {formatNumber(buyingRate)} ₺
-                  </p>
+                <div>
+                  <p className="text-xs text-muted-foreground">{t("exchangeRate")}</p>
+                  <p className="font-medium">{formatNumber(buyingRate)}</p>
                 </div>
+              </div>
 
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">{t("currentRate")}</p>
-                  {isLoading ? (
-                    <Skeleton className="h-6 w-24" />
-                  ) : (
-                    <p className="font-medium">
-                      {formatNumber(currentRate)} ₺
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">{t("initialValue")}</p>
+              {/* Values and Profit Info */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground">{t("purchaseValue")}</p>
                   <p className="font-medium">{formatCurrency(tlValueThen)}</p>
                 </div>
-                
-                <div className="space-y-1">
+                <div>
                   <p className="text-xs text-muted-foreground">{t("currentValue")}</p>
                   {isLoading ? (
                     <Skeleton className="h-6 w-24" />
                   ) : (
                     <p className="font-medium">
-                      {tlValue !== null ? formatCurrency(tlValue) : "N/A"}
+                      {tlValue ? formatCurrency(tlValue) : "---"}
                     </p>
                   )}
                 </div>
               </div>
-            </div>
-            
-            {/* Profit/Loss Information */}
-            <div className="sm:w-1/4 flex flex-col justify-between border-t sm:border-t-0 sm:border-l border-border/30 pt-3 sm:pt-0 sm:pl-4">
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">{t("profitLoss")}</p>
-                {isLoading ? (
-                  <Skeleton className="h-6 w-24" />
-                ) : profitMargin !== null ? (
-                  <div className="flex items-center">
-                    {profitMargin > 0 ? (
-                      <ArrowUp className="h-4 w-4 text-green-500 mr-1" />
-                    ) : profitMargin < 0 ? (
-                      <ArrowDown className="h-4 w-4 text-red-500 mr-1" />
-                    ) : (
-                      <MinusCircle className="h-4 w-4 text-muted-foreground mr-1" />
-                    )}
-                    <span className={`font-semibold ${
-                      profitMargin > 0 ? 'text-green-500' : 
-                      profitMargin < 0 ? 'text-red-500' : ''
-                    }`}>
-                      {formatCurrency(Math.abs(profitMargin))}
-                    </span>
+
+              {/* Profit/Loss Section */}
+              {!isLoading && profitMargin !== null && profitPercentage !== null && (
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <p className="text-xs text-muted-foreground">{t("profitLoss")}</p>
+                    <Badge 
+                      variant={profitMargin > 0 ? "default" : "destructive"}
+                      className={cn(
+                        "transition-all duration-500",
+                        getProfitLossStyle(profitPercentage)
+                      )}
+                    >
+                      {formatCurrency(profitMargin)}
+                    </Badge>
                   </div>
-                ) : null}
-              </div>
-              
-              <div className="mt-2">
-                <p className="text-xs text-muted-foreground mb-1">{t("profitPercent")}</p>
-                {isLoading ? (
-                  <Skeleton className="h-6 w-16" />
-                ) : profitPercentage !== null ? (
-                  <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                    profitPercentage > 0 
-                      ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
-                      : profitPercentage < 0 
-                        ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                        : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
-                  }`}>
-                    {profitPercentage > 0 ? (
-                      <ArrowUp className="h-3 w-3 mr-1" />
-                    ) : profitPercentage < 0 ? (
-                      <ArrowDown className="h-3 w-3 mr-1" />
-                    ) : (
-                      <MinusCircle className="h-3 w-3 mr-1" />
-                    )}
-                    {formatPercentage(Math.abs(profitPercentage))}
+                  <div className="flex justify-between items-center">
+                    <p className="text-xs text-muted-foreground">{t("profitPercent")}</p>
+                    <Badge 
+                      variant={profitPercentage > 0 ? "default" : "destructive"}
+                      className={cn(
+                        "transition-all duration-500",
+                        getProfitLossStyle(profitPercentage)
+                      )}
+                    >
+                      {formatPercentage(profitPercentage)}
+                    </Badge>
                   </div>
-                ) : null}
-              </div>
-              
+                </div>
+              )}
+
+              {error && (
+                <Alert variant="destructive" className="mt-4">
+                  <AlertTitle>{t("errorRates")}</AlertTitle>
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              {/* Delete Button */}
               <Button
                 variant="ghost"
                 size="sm"
@@ -291,6 +303,7 @@ const AssetCard = ({
         </Card>
       </motion.div>
       
+      {/* Delete Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent className="bg-card/90 backdrop-blur-md border border-border/50">
           <AlertDialogHeader>

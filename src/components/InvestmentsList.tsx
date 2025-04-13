@@ -1,90 +1,98 @@
-import { useState } from "react";
-import { AssetType } from "@/lib/constants";
-import type { Investment } from "@/lib/constants";
-import AssetCard from "./AssetCard";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { motion } from "framer-motion";
-import { PlusCircle } from "lucide-react";
+import { useState, useRef } from "react";
+import { Investment, AssetType } from "@/lib/constants";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useVirtualizer } from '@tanstack/react-virtual';
+import AssetCard from "./AssetCard";
+import InvestmentFilters from "./InvestmentFilters";
+import { Skeleton } from "./ui/skeleton";
 
 interface InvestmentsListProps {
   investments: Investment[];
-  onDeleteInvestment: (id: string) => void;
+  onDelete: (id: string) => void;
+  isLoading: boolean;
 }
 
-const InvestmentsList = ({ investments, onDeleteInvestment }: InvestmentsListProps) => {
+const InvestmentsList = ({ investments, onDelete, isLoading }: InvestmentsListProps) => {
   const { t } = useLanguage();
-  const [activeFilter, setActiveFilter] = useState<AssetType | 'all'>('all');
-  
-  const filteredInvestments = activeFilter === 'all'
-    ? investments
-    : investments.filter(investment => investment.type === activeFilter);
-  
-  const filterButtons = [
-    { label: t("all"), value: 'all' as const },
-    { label: t("gold"), value: AssetType.GOLD },
-    { label: t("dollar"), value: AssetType.DOLLAR },
-    { label: t("euro"), value: AssetType.EURO },
-  ];
+  const [selectedFilter, setSelectedFilter] = useState<AssetType | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  return (
-    <div className="animate-fade-in">
-      <div className="flex flex-wrap gap-2 mb-6">
-        {filterButtons.map(({ label, value }) => (
-          <Button
-            key={value}
-            variant="outline"
-            size="sm"
-            onClick={() => setActiveFilter(value)}
-            className={cn(
-              "transition-all duration-300 ease-in-out rounded-full",
-              activeFilter === value 
-                ? "bg-primary text-primary-foreground font-medium shadow-md"
-                : "hover:bg-secondary/80"
-            )}
-          >
-            {label}
-          </Button>
+  const filteredInvestments = selectedFilter
+    ? investments.filter(investment => investment.type === selectedFilter)
+    : investments;
+
+  const virtualizer = useVirtualizer({
+    count: filteredInvestments.length,
+    getScrollElement: () => containerRef.current,
+    estimateSize: () => 200, // Estimated height of each card
+    overscan: 5, // Number of items to render beyond visible area
+  });
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        {[...Array(3)].map((_, i) => (
+          <Skeleton key={i} className="h-[200px] w-full" />
         ))}
       </div>
+    );
+  }
+
+  if (investments.length === 0) {
+    return (
+      <div className="text-center text-muted-foreground py-8">
+        <p>{t("noInvestments")}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <InvestmentFilters 
+        selectedFilter={selectedFilter}
+        onFilterChange={setSelectedFilter}
+      />
       
       {filteredInvestments.length === 0 ? (
-        <motion.div 
-          initial={{ opacity: 0 }} 
-          animate={{ opacity: 1 }} 
-          className="text-center p-8 border border-dashed rounded-lg bg-white/20 backdrop-blur-sm"
-        >
-          {investments.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 py-4">
-              <PlusCircle className="h-10 w-10 text-muted-foreground/60" />
-              <p className="text-muted-foreground">
-                {t("noInvestments")}
-              </p>
-            </div>
-          ) : (
-            <p className="text-muted-foreground">
-              {t("noMatchingInvestments")}
-            </p>
-          )}
-        </motion.div>
+        <div className="text-center text-muted-foreground py-8">
+          <p>{t("noMatchingInvestments")}</p>
+        </div>
       ) : (
-        <div className="space-y-4">
-          {filteredInvestments.map((investment) => (
-            <motion.div
-              key={investment.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-              layout
-            >
-              <AssetCard
-                {...investment}
-                onDelete={() => onDeleteInvestment(investment.id)}
-              />
-            </motion.div>
-          ))}
+        <div 
+          ref={containerRef} 
+          className="h-[calc(100vh-400px)] overflow-auto scrollbar-thin scrollbar-thumb-primary/10 scrollbar-track-transparent"
+          style={{
+            contain: 'strict',
+          }}
+        >
+          <div
+            style={{
+              height: `${virtualizer.getTotalSize()}px`,
+              width: '100%',
+              position: 'relative',
+            }}
+          >
+            {virtualizer.getVirtualItems().map((virtualItem) => (
+              <div
+                key={virtualItem.key}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: `${virtualItem.size}px`,
+                  transform: `translateY(${virtualItem.start}px)`,
+                }}
+              >
+                <div className="p-2">
+                  <AssetCard
+                    {...filteredInvestments[virtualItem.index]}
+                    onDelete={() => onDelete(filteredInvestments[virtualItem.index].id)}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
