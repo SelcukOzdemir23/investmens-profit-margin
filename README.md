@@ -1,8 +1,9 @@
 <div align="center">
-  
+
 # 📈 Profit Margin Calculator
 
-### Yatırımlarınızı Akıllıca Yönetin
+**Smart Investment Portfolio Tracker**  
+Modern, responsive, and real-time web app for managing your Gold, USD, and EUR investments with advanced analytics.
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
@@ -10,77 +11,113 @@
 [![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/)
 
 <p align="center">
-  <img src="public/preview.gif" alt="Preview" width="600px" />
+  <img src="public/preview.gif" alt="App Preview" width="600px" />
 </p>
-
 </div>
 
-## 🌟 Özellikler
+---
 
-- 💰 Altın, Dolar ve Euro yatırımlarınızı takip edin
-- 📊 Gerçek zamanlı kur bilgileri
-- 📈 Kar/zarar analizleri
-- 🔄 Otomatik portföy güncelleme
-- 🌙 Koyu/açık tema desteği
-- 🌐 Çoklu dil desteği (TR/EN)
-- 🔐 Google hesabı ile güvenli giriş
-- ☁️ Firebase ile gerçek zamanlı veri senkronizasyonu
+## ✨ Features
 
-## 🚀 Kurulum
+- **Multi-currency Portfolio:** Track your Gold, Dollar, and Euro investments with ease.
+- **Real-time Exchange Rates:** Stay up to date with automatic sync from reliable sources.
+- **Profit & Loss Analytics:** Instantly see your portfolio performance.
+- **Auto Portfolio Refresh:** Your investment data is continuously updated.
+- **Dark/Light Theme:** Seamlessly switch between modes for personalized experience.
+- **Internationalization (i18n):** Full support for Turkish and English.
+- **Secure Google Authentication:** Fast, secure login with your Google account.
+- **Cloud Sync with Firebase:** Your data, always backed up and in sync across devices.
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) (v16+ recommended)
+- [npm](https://www.npmjs.com/) or [yarn](https://yarnpkg.com/)
+
+### Installation
 
 ```bash
-# Projeyi klonlayın
+# Clone the repo
 git clone https://github.com/username/profit-margin-cards.git
 
-# Proje dizinine gidin
+# Enter project directory
 cd profit-margin-cards
 
-# Bağımlılıkları yükleyin
+# Install dependencies
 npm install
+# or
+yarn
 
-# Geliştirme sunucusunu başlatın
+# Start the development server
 npm run dev
+# or
+yarn dev
 ```
 
-## 🛠️ Teknolojiler
+### Production Build
 
-| Teknoloji | Açıklama |
-|-----------|-----------|
-| React + Vite | Modern web geliştirme |
-| TypeScript | Tip güvenliği |
-| Tailwind CSS | Stil ve tasarım |
-| shadcn/ui | Modern UI bileşenleri |
-| Firebase | Backend ve kimlik doğrulama |
-| React Query | Veri yönetimi |
-| Framer Motion | Animasyonlar |
+```bash
+npm run build
+# or
+yarn build
+```
 
-## 📱 Responsive Tasarım
+---
+
+## 🖥️ Tech Stack
+
+| Technology            | Purpose                              |
+|-----------------------|--------------------------------------|
+| **React + Vite**      | Blazing fast modern web app framework|
+| **TypeScript**        | Type-safe application development    |
+| **Tailwind CSS**      | Utility-first CSS for rapid UI       |
+| **shadcn/ui**         | Elegant, accessible component library|
+| **Firebase**          | Auth & cloud data sync               |
+| **React Query**       | Remote state management & caching    |
+| **Framer Motion**     | Interactive UI animations            |
+
+---
+
+## 📱 Responsive Design
 
 <p align="center">
-  <img src="public/responsive.png" alt="Responsive Design" width="800px" />
+  <img src="public/responsive.png" alt="Responsive Design Demo" width="800px" />
 </p>
+Works beautifully on desktop, tablet, and mobile devices.
 
-## 🤝 Katkıda Bulunma
+---
 
-1. Bu depoyu fork edin
-2. Yeni bir özellik branch'i oluşturun (`git checkout -b feature/amazing`)
-3. Değişikliklerinizi commit edin (`git commit -m 'Harika özellik eklendi'`)
-4. Branch'inizi push edin (`git push origin feature/amazing`)
-5. Bir Pull Request oluşturun
+## 🤝 Contributing
 
-## 📄 Lisans
+We welcome contributions!  
+To propose a fix or a new feature:
 
-Bu proje MIT lisansı altında lisanslanmıştır. Detaylı bilgi için [LICENSE](LICENSE) dosyasına bakın.
+1. [Fork](https://github.com/username/profit-margin-cards/fork) this repository
+2. Create a feature branch:  
+   `git checkout -b feat/your-feature`
+3. Commit your changes:  
+   `git commit -m "Brief description of your changes"`
+4. Push to remote:  
+   `git push origin feat/your-feature`
+5. Open a [Pull Request](https://github.com/username/profit-margin-cards/pulls)
 
-## 🙏 Teşekkürler
+Please ensure your code follows existing linting and style guidelines.
 
-Bu projeyi geliştirmemde yardımcı olan herkese teşekkürler!
+---
 
-<div align="center">
-  <br />
-  <p>
-    <a href="https://lovable.dev">
-      🚀 Lovable ile Geliştirildi
-    </a>
-  </p>
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE).
+
+---
+
+## 🙏 Acknowledgements
+
+Thanks to all contributors and the open source community who helped shape this project.
+
+<div align="center" style="margin-top:2em;">
+  <a href="https://lovable.dev">🚀 Built with Lovable</a>
 </div>
